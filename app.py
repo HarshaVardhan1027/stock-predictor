@@ -9,15 +9,19 @@ def home():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    user_input = request.form.get("ticker")
-    result = predict_stock(user_input)
+    user_input = request.form.get("ticker", "").strip()
+    if not user_input:
+        return render_template_string(HTML_TEMPLATE, result="❌ Please enter a stock name or symbol.")
+    
+    try:
+        result, forecast_df = predict_stock(user_input)
 
-    if isinstance(result, tuple):
-        img_tag, forecast_df = result
-        forecast_table = forecast_df.to_html(classes="table table-striped", border=0)
-        return render_template("result.html", img_tag=img_tag, table=forecast_table, name=user_input)
-    else:
-        return render_template("error.html", message=result)
+        # ✅ if forecast_df is None, show a friendly message instead of crashing
+        if forecast_df is None or forecast_df.empty:
+            result += "<br>⚠️ Could not generate forecast — maybe the stock is delisted or data unavailable."
+            return render_template_string(HTML_TEMPLATE, result=result)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+        return render_template_string(HTML_TEMPLATE, result=result, forecast=forecast_df)
+
+    except Exception as e:
+        return render_template_string(HTML_TEMPLATE, result=f"❌ Error: {str(e)}")
