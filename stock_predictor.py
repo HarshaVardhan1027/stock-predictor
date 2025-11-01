@@ -9,7 +9,7 @@ import io
 import base64
 
 # Preload ticker data (optional, or load dynamically)
-TICKER_PATH = "/content/drive/MyDrive/INDIAN_STOCK_TICKERS.csv"
+TICKER_PATH = "INDIAN_STOCK_TICKERS.csv"
 
 def predict_stock(user_input, forecast_days=30):
     try:
