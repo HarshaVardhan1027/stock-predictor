@@ -19,6 +19,7 @@ except Exception as e:
     print("⚠️ Warning: Could not load ticker list.", e)
     TICKERS = []
 
+
 def predict_stock(user_input, forecast_days=30):
     """
     Predicts stock prices for the given ticker or company name.
