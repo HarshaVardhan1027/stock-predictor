@@ -7,17 +7,30 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 import io, base64
 
+# ✅ Path to ticker list CSV
 TICKER_PATH = "INDIAN_STOCK_TICKERS.csv"
 
+# ✅ Load all tickers globally at import time
 try:
     tickers_df = pd.read_csv(TICKER_PATH)
     TICKERS = tickers_df["SYMBOL"].dropna().unique().tolist()
+    print(f"✅ Loaded {len(TICKERS)} tickers.")
 except Exception as e:
     print("⚠️ Warning: Could not load ticker list:", e)
     TICKERS = []
 
+
 def predict_stock(user_input, forecast_days=30):
-    tickers_df = pd.read_csv(TICKER_PATH)
+    """
+    Predicts stock prices for the given ticker or company name.
+    Returns an HTML <img> tag (plot) and forecast dataframe.
+    """
+    try:
+        tickers_df = pd.read_csv(TICKER_PATH)
+    except:
+        return "❌ Could not load ticker list.", None
+
+    # Match user input to ticker or company name
     match = tickers_df[
         (tickers_df["SYMBOL"].astype(str).str.upper() == user_input.upper()) |
         (tickers_df["COMPANY_NAME"].str.contains(user_input, case=False, na=False))
@@ -33,6 +46,7 @@ def predict_stock(user_input, forecast_days=30):
     if df.empty:
         return "⚠️ No data found.", None
 
+    # Prepare data
     prices = df['Close'].values.reshape(-1,1)
     log_returns = np.log(prices[1:] / prices[:-1])
     scaler = MinMaxScaler((0,1))
@@ -46,6 +60,7 @@ def predict_stock(user_input, forecast_days=30):
     X, y = np.array(X), np.array(y)
     X = X.reshape(X.shape[0], X.shape[1], 1)
 
+    # Train model
     model = Sequential([
         LSTM(50, input_shape=(X.shape[1],1)),
         Dense(1)
@@ -53,6 +68,7 @@ def predict_stock(user_input, forecast_days=30):
     model.compile(optimizer='adam', loss='mse')
     model.fit(X, y, epochs=3, batch_size=64, verbose=0)
 
+    # Forecast future
     last_seq = scaled[-seq_len:]
     preds = []
     for _ in range(forecast_days):
@@ -67,12 +83,14 @@ def predict_stock(user_input, forecast_days=30):
     forecast_dates = pd.bdate_range(df.index[-1]+pd.Timedelta(days=1), periods=forecast_days)
     forecast_df = pd.Series(forecast_prices, index=forecast_dates, name="Predicted Price")
 
+    # Plot
     plt.figure(figsize=(10,5))
     plt.plot(df['Close'], label="History")
     plt.plot(forecast_df, label="Forecast", color='red')
     plt.legend()
     plt.title(f"{name} ({ticker}) Prediction")
 
+    # Convert plot to base64
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     buf.seek(0)
