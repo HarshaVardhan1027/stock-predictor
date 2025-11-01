@@ -1,8 +1,0 @@
-flask
-pandas
-numpy
-yfinance
-matplotlib
-tensorflow
-scikit-learn
-gunicorn
